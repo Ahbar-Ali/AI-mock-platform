@@ -218,8 +218,27 @@ const Agent = ({
       setIsSpeaking(false);
     };
 
-    const onError = (error: Error) => {
-      console.log("Error:", error);
+    const onError = (error: any) => {
+      console.error("VAPI ERROR:", error);
+
+      console.error(
+        "VAPI ERROR DETAILS:",
+        JSON.stringify(error, null, 2)
+      );
+
+      if (error?.message) {
+        console.error(
+          "VAPI ERROR MESSAGE:",
+          error.message
+        );
+      }
+
+      if (error?.errorMsg) {
+        console.error(
+          "VAPI ERROR MSG:",
+          error.errorMsg
+        );
+      }
     };
 
     vapi.on("call-start", onCallStart);

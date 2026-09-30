@@ -345,6 +345,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
         object.areasForImprovement,
       final_assessment:
         object.finalAssessment,
+      transcript,
     };
 
     console.log(
@@ -481,6 +482,7 @@ export async function getFeedbackByInterviewId(
     strengths: data.strengths ?? [],
     areasForImprovement: data.areas_for_improvement ?? [],
     finalAssessment: data.final_assessment,
+    transcript: data.transcript ?? [],
     createdAt: data.created_at,
   } as Feedback;
 }

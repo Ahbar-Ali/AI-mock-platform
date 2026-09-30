@@ -103,6 +103,39 @@ const Feedback = async ({ params }: RouteParams) => {
         </ul>
       </div>
 
+      <div className="flex flex-col gap-4">
+        <h2>Interview Transcript</h2>
+
+        {feedback?.transcript && feedback.transcript.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {feedback.transcript.map((message, index) => (
+              <div
+                key={index}
+                className={`rounded-lg p-4 ${
+                  message.role === "user"
+                    ? "bg-dark-200"
+                    : "bg-dark-300"
+                }`}
+              >
+                <p className="font-bold mb-1">
+                  {message.role === "user"
+                    ? "You"
+                    : message.role === "assistant"
+                    ? "AI Interviewer"
+                    : "System"}
+                </p>
+
+                <p>{message.content}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-light-400">
+            No transcript available for this interview.
+          </p>
+        )}
+      </div>
+
       <div className="buttons">
         <Button className="btn-secondary flex-1">
           <Link href="/" className="flex w-full justify-center">
