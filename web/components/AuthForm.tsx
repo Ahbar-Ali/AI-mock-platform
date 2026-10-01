@@ -21,7 +21,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     try {
       setLoading(true);
 
-      const response = await fetch("http://127.0.0.1:8000/auth/login", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-frame`, {
         method: "POST",
       });
 
@@ -68,7 +68,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     try {
       setLoading(true);
 
-      const response = await fetch("http://127.0.0.1:8000/auth/enroll", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/enroll`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

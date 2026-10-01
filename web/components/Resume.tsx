@@ -64,7 +64,7 @@ const ResumeInterviewSetup = ({
       // STEP 1 — PDF → text
       const response =
         await fetch(
-          "http://127.0.0.1:8000/resume/extract",
+          `${process.env.NEXT_PUBLIC_API_URL}/resume/extract`,
           {
             method: "POST",
             body: formData,

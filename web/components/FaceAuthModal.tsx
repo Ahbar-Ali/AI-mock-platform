@@ -199,7 +199,7 @@ const FaceAuthModal = ({
 
         const response =
           await fetch(
-            "http://127.0.0.1:8001/liveness/frame",
+            `${process.env.NEXT_PUBLIC_LIVENESS_API_URL}/liveness/frame`,
             {
               method: "POST",
               body: formData,
@@ -306,7 +306,7 @@ const FaceAuthModal = ({
             );
 
             const response = await fetch(
-            "http://127.0.0.1:8000/auth/verify-frame",
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-frame`,
             {
                 method: "POST",
                 body: formData,
@@ -445,7 +445,7 @@ const FaceAuthModal = ({
       });
 
       const response = await fetch(
-        `http://127.0.0.1:8000/auth/enroll?name=${encodeURIComponent(
+       `${process.env.NEXT_PUBLIC_API_URL}/auth/enroll?name=${encodeURIComponent(
           name.trim()
         )}`,
         {
