@@ -11,7 +11,7 @@ const LogoutButton = () => {
       method: "DELETE",
     });
 
-    router.push("/sign-in");
+    router.push("/");
     router.refresh();
   };
 

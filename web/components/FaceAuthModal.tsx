@@ -358,7 +358,7 @@ const FaceAuthModal = ({
             cleanup();
 
             setTimeout(() => {
-            router.push("/");
+            router.push("/dashboard");
             router.refresh();
             }, 700);
 
