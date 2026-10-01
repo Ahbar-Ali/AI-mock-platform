@@ -1,11 +1,9 @@
-
 import cv2
 import numpy as np
 import mediapipe as mp
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-
 
 
 app = FastAPI()
@@ -22,11 +20,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 BaseOptions = mp.tasks.BaseOptions
 FaceLandmarker = mp.tasks.vision.FaceLandmarker
 FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
-
 
 MODEL_PATH = "models/face_landmarker.task"
 
@@ -40,19 +39,17 @@ options = FaceLandmarkerOptions(
     output_face_blendshapes=True,
     min_face_detection_confidence=0.5,
     min_face_presence_confidence=0.5,
-    min_tracking_confidence=0.5,
 )
 
 
-landmarker = FaceLandmarker.create_from_options(
-    options
-)
+landmarker = FaceLandmarker.create_from_options(options)
 
 
-blink_threshold = 0.30
-open_threshold = 0.20
+BLINK_THRESHOLD = 0.25
+OPEN_THRESHOLD = 0.22
 
 eyes_were_closed = False
+
 
 @app.get("/")
 def root():
@@ -80,9 +77,12 @@ async def check_liveness(
     )
 
     if frame is None:
+        eyes_were_closed = False
+
         return {
             "face_detected": False,
-            "liveness": False
+            "liveness": False,
+            "status": "no_face"
         }
 
     rgb_frame = cv2.cvtColor(
@@ -95,43 +95,42 @@ async def check_liveness(
         data=rgb_frame
     )
 
-    result = landmarker.detect(
-        mp_image,
-    )
+    result = landmarker.detect(mp_image)
 
     if not result.face_blendshapes:
+        eyes_were_closed = False
+
         return {
             "face_detected": False,
-            "liveness": False
+            "liveness": False,
+            "status": "no_face"
         }
 
-    blendshapes = (
-        result.face_blendshapes[0]
-    )
+    blendshapes = result.face_blendshapes[0]
 
     blink_left = 0.0
     blink_right = 0.0
 
     for shape in blendshapes:
 
-        if (
-            shape.category_name
-            == "eyeBlinkLeft"
-        ):
+        if shape.category_name == "eyeBlinkLeft":
             blink_left = shape.score
 
-        elif (
-            shape.category_name
-            == "eyeBlinkRight"
-        ):
+        elif shape.category_name == "eyeBlinkRight":
             blink_right = shape.score
 
     average_blink = (
         blink_left + blink_right
     ) / 2
 
-    if average_blink > blink_threshold:
+    print(
+        f"Left: {blink_left:.3f}, "
+        f"Right: {blink_right:.3f}, "
+        f"Average: {average_blink:.3f}"
+    )
 
+    # Eyes appear closed
+    if average_blink >= BLINK_THRESHOLD:
         eyes_were_closed = True
 
         return {
@@ -139,13 +138,15 @@ async def check_liveness(
             "liveness": False,
             "status": "eyes_closed",
             "blink_score": average_blink,
+            "blink_left": blink_left,
+            "blink_right": blink_right,
         }
 
+    # Eyes reopened after being closed
     if (
         eyes_were_closed
-        and average_blink < open_threshold
+        and average_blink <= OPEN_THRESHOLD
     ):
-
         eyes_were_closed = False
 
         return {
@@ -153,6 +154,8 @@ async def check_liveness(
             "liveness": True,
             "status": "blink_detected",
             "blink_score": average_blink,
+            "blink_left": blink_left,
+            "blink_right": blink_right,
         }
 
     return {
@@ -160,4 +163,6 @@ async def check_liveness(
         "liveness": False,
         "status": "watching",
         "blink_score": average_blink,
+        "blink_left": blink_left,
+        "blink_right": blink_right,
     }
