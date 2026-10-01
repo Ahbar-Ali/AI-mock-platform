@@ -33,6 +33,7 @@ const FaceAuthModal = ({
   const [status, setStatus] =useState("Starting camera...");
   const [cameraError, setCameraError] =useState("");
   const [finished, setFinished] =useState(false);
+  const livenessRequestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!open) {return;}
@@ -173,10 +174,10 @@ const FaceAuthModal = ({
       }, 250);
   };
 
-  const sendFrameForLiveness =
-    async () => {
+  const sendFrameForLiveness = async () => {
       if (
-        authenticatingRef.current
+        authenticatingRef.current ||
+        livenessRequestInFlightRef.current
       ) {
         return;
       }
@@ -187,9 +188,10 @@ const FaceAuthModal = ({
         return;
       }
 
+      livenessRequestInFlightRef.current = true;
+
       try {
-        const formData =
-          new FormData();
+        const formData = new FormData();
 
         formData.append(
           "file",
@@ -197,72 +199,54 @@ const FaceAuthModal = ({
           "frame.jpg"
         );
 
-        const response =
-          await fetch(
-            `${process.env.NEXT_PUBLIC_LIVENESS_API_URL}/liveness/frame`,
-            {
-              method: "POST",
-              body: formData,
-            }
-          );
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_LIVENESS_API_URL}/liveness/frame`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
+        console.log(
+          "LIVENESS STATUS:",
+          response.status
+        );
 
-        //const data =await response.json();
-          console.log(
-            "LIVENESS STATUS:",
-            response.status
-          );
+        const text = await response.text();
 
-          const text =
-            await response.text();
+        console.log(
+          "LIVENESS RESPONSE:",
+          text
+        );
 
-          console.log(
-            "LIVENESS RESPONSE:",
-            text
-          );
-
-          const data =
-            JSON.parse(text);
+        const data = JSON.parse(text);
 
         if (!data.face_detected) {
           setStatus(
             "Face not detected. Look at the camera."
           );
-
           return;
         }
 
-        if (
-          data.status ===
-          "eyes_closed"
-        ) {
-          setStatus(
-            "Blink detected..."
-          );
+        if (data.status === "eyes_closed") {
+          setStatus("Blink detected...");
         }
 
-        if (
-          data.status ===
-          "watching"
-        ) {
+        if (data.status === "watching") {
           setStatus(
             "Look at the camera and blink once"
           );
         }
 
         if (data.liveness) {
-          authenticatingRef.current =
-            true;
+          authenticatingRef.current = true;
 
-          if (
-            scanIntervalRef.current
-          ) {
+          if (scanIntervalRef.current) {
             clearInterval(
               scanIntervalRef.current
             );
 
-            scanIntervalRef.current =
-              null;
+            scanIntervalRef.current = null;
           }
 
           setStatus(
@@ -280,6 +264,8 @@ const FaceAuthModal = ({
         setStatus(
           "Could not verify liveness."
         );
+      } finally {
+        livenessRequestInFlightRef.current = false;
       }
     };
     

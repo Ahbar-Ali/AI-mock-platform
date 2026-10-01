@@ -1,4 +1,4 @@
-import time
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -35,7 +35,7 @@ options = FaceLandmarkerOptions(
     base_options=BaseOptions(
         model_asset_path=MODEL_PATH
     ),
-    running_mode=VisionRunningMode.VIDEO,
+    running_mode=VisionRunningMode.IMAGE,
     num_faces=1,
     output_face_blendshapes=True,
     min_face_detection_confidence=0.5,
@@ -53,9 +53,6 @@ blink_threshold = 0.30
 open_threshold = 0.20
 
 eyes_were_closed = False
-
-start_time = time.time()
-
 
 @app.get("/")
 def root():
@@ -98,13 +95,8 @@ async def check_liveness(
         data=rgb_frame
     )
 
-    timestamp_ms = int(
-        (time.time() - start_time) * 1000
-    )
-
-    result = landmarker.detect_for_video(
+    result = landmarker.detect(
         mp_image,
-        timestamp_ms
     )
 
     if not result.face_blendshapes:
