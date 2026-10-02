@@ -108,54 +108,52 @@ const FaceAuthModal = ({
   };
 
   const captureFrame = async (): Promise<Blob | null> => {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-      if (!video || !canvas) {return null;}
+    if (!video || !canvas) return null;
 
-      if (
-        video.videoWidth === 0 ||
-        video.videoHeight === 0
-      ) {return null;}
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      return null;
+    }
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
+    const MAX_WIDTH = 800;
 
-      if (!ctx) {return null;}
+    const scale =
+      video.videoWidth > MAX_WIDTH
+        ? MAX_WIDTH / video.videoWidth
+        : 1;
 
-      ctx.save();
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
 
-      ctx.translate(
-        canvas.width,
-        0
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return null;
+
+    ctx.save();
+
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    ctx.restore();
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(blob),
+        "image/jpeg",
+        0.75
       );
-
-      ctx.scale(
-        -1,
-        1
-      );
-
-      ctx.drawImage(
-        video,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      ctx.restore();
-
-      return new Promise(
-        (resolve) => {
-          canvas.toBlob(
-            (blob) => resolve(blob),
-            "image/jpeg",
-            0.9
-          );
-        }
-      );
-    };
+    });
+  };
 
   // -------------------------
   // LOGIN
@@ -430,58 +428,77 @@ const FaceAuthModal = ({
         );
       });
 
-      const response = await fetch(
-       `${process.env.NEXT_PUBLIC_API_URL}/auth/enroll?name=${encodeURIComponent(
-          name.trim()
-        )}`,
-        {
-          method: "POST",
-          body: formData,
+      const controller = new AbortController();
+
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, 20000);
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/enroll?name=${encodeURIComponent(
+            name.trim()
+          )}`,
+          {
+            method: "POST",
+            body: formData,
+            signal: controller.signal,
+          }
+        );
+
+        clearTimeout(timeout);
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          setStatus(
+            data.error || "Face enrollment failed."
+          );
+
+          enrollingRef.current = false;
+          return;
         }
-      );
 
-      const data = await response.json();
+        setFinished(true);
 
-      console.log(
-        "Enrollment response:",
-        data
-      );
-
-      if (!response.ok || !data.success) {
         setStatus(
-          data.error ||
-            "Face enrollment failed."
+          `Enrollment complete ✓ Welcome, ${data.name}`
+        );
+
+        toast.success(
+          "Face enrolled successfully!"
+        );
+
+        cleanup();
+
+        setTimeout(() => {
+          router.push("/sign-in");
+          router.refresh();
+        }, 1000);
+
+      } catch (error) {
+        clearTimeout(timeout);
+
+        console.error(
+          "Enrollment request error:",
+          error
+        );
+
+        setStatus(
+          "Enrollment took too long. Please try again."
         );
 
         enrollingRef.current = false;
-        return;
       }
-
-      setFinished(true);
-
-      setStatus(
-        `Enrollment complete ✓ Welcome, ${data.name}`
-      );
-
-      toast.success(
-        "Face enrolled successfully!"
-      );
-
-      cleanup();
-
-      setTimeout(() => {
-        router.push("/sign-in");
-        router.refresh();
-      }, 1000);
 
     } catch (error) {
       console.error(
-        "Enrollment request error:",
+        "Enrollment capture error:",
         error
       );
 
       setStatus(
-        "Face enrollment failed."
+        "Could not capture face images."
       );
 
       enrollingRef.current = false;
